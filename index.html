@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="description" content="">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+	<!-- Link to the jQuery Library -->
+    <script src="https://code.jquery.com/jquery-2.2.3.js" integrity="sha256-laXWtGydpwqJ8JA+X9x2miwmaiKhn8tVmOVEigRNtP4=" crossorigin="anonymous"></script>
+    <!-- Link to Firebase -->
+    <script src="https://cdn.firebase.com/js/client/2.4.1/firebase.js"></script>
+    <!-- Link to moment.js -->
+    <script src="https://cdn.jsdelivr.net/momentjs/2.12.0/moment.min.js"></script>
+    <!-- Link to our JS -->
+    <script src="assets/javascript/main.js"></script>
+
+    <!-- Added a link to Bootstrap-->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+    <!-- Link to CSS -->
+	  <link rel="stylesheet" type="text/css" href="assets/style.css">
+	<title>Train Timetable.</title>
+</head>
+<body>
+  <div class= "wrapper">
+
+    <div class="jumbotron">
+      <header>
+        <h1>The Daily Train Schedule.</h1>
+      </header>
+    </div>
+
+    <div class="container">
+      <div class="row">
+        <div class="col-lg-12">
+
+          <div class="panel-primary">
+            <h2 class="panel-heading">Scheduled trains<span id="currentTimeSpan"></span></h2>
+          </div>
+          <div class="panel panel-body">
+            <table class="table table-hover" id='trainScheduleTable'>
+              <thead>
+                <tr>
+                  <th>Train Name</th>
+                  <th>Destination</th>
+                  <th>Frequency (Min)</th>
+                  <th>First Train</th>
+                  <th>Next Scheduled Arrival</th>
+                  <th>ETA:</th>
+                </tr>
+              </thead>
+              <tbody id="trainScheduleBody">
+                <!-- Use JS to fill this data -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="panel-primary">
+            <h2 class="panel-heading">Schedule a new Train!</h2>
+          </div>
+          <div class="panel-body">
+
+          <!-- Entry Form -->
+          <form>
+            <div class="form-group">
+              <label for="">Train Name</label>
+              <input type="text" class="form-control" id="trainNameInput">
+            </div>
+
+            <div class="form-group">
+              <label for="">Destination</label>
+              <input type="text" class="form-control" id="destinationInput">
+            </div>
+
+            <div class="form-group">
+              <label for="">Frequency (Minutes)</label>
+              <input type="text" class="form-control" id="frequencyInput">
+            </div>
+
+            <div class="form-group">
+              <label for="">Start Time ( Format 09:45 )</label>
+              <input type="text" class="form-control" id="startTimeInput">
+            </div>
+          
+            <button type="submit" class="btn btn-primary" id="addTrainBtn">Submit</button>
+          </form>
+
+          </div>
+
+        </div><!-- End col-12 -->
+      </div><!-- End row -->
+    </div><!-- End container -->
+  </div><!-- End wrapper -->
+
+
+
+<script src="https://www.gstatic.com/firebasejs/4.4.0/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyCvfYuMB09toAqkhBWqQX1Eg2RrBzseY04",
+    authDomain: "train-schedule-549d0.firebaseapp.com",
+    databaseURL: "https://train-schedule-549d0.firebaseio.com",
+    projectId: "train-schedule-549d0",
+    storageBucket: "train-schedule-549d0.appspot.com",
+    messagingSenderId: "806074633602"
+  };
+  firebase.initializeApp(config);
+</script>
+<script>
+  $("document").ready(function() {
+    console.log("JS and jQuery is linked and working"); // Confirm JS
+
+    /***  GLOBAL VARIABLES  ***/
+    var trainDatabase = new Firebase("https://vivid-inferno-4129.firebaseio.com/");
+    var caputredValues;
+
+    /***  FUNCTIONS  ***/
+    /*
+    trainDatabase.on("value", function(snapshot){ 
+      postToHTML();
+    });
+      postToHTML = function(){
+        caputredValues;
+      };
+      */
+
+    captureData = function() {
+        //Capture imputs from 4 imput divs
+        var a = $("#trainNameInput").val().trim();
+        var b = $("#destinationInput").val().trim();
+        var c = $("#frequencyInput").val().trim();
+        var d = $("#startTimeInput").val().trim();
+
+        //local vars to push as object to Firebase
+        caputredValues = {
+            name: a,
+            destination: b,
+            frequency: c,
+            start: d
+        }
+
+        //push data to Firebase
+        trainDatabase.push(caputredValues);
+        alert("Train added sucessfully");
+        clearDataForms();
+    };
+
+    clearDataForms = function() {
+        //set values to blank
+        $("#trainNameInput").val("");
+        $("#destinationInput").val("");
+        $("#frequencyInput").val("");
+        $("#startTimeInput").val("");
+        caputredValues;
+    };
+
+
+
+    /***  EVENTS  ***/
+    $("#addTrainBtn").on("click", function() {
+        captureData();
+        return false; // Or Prevent Default. No preference.
+    });
+
+    //firebase.js function of child added, run function with returned parameter
+    trainDatabase.on("child_added", function(snapshot) {
+        //variables for name, destination, frequency, and start time
+        var na = snapshot.val().name;
+        var dest = snapshot.val().destination;
+        var freq = snapshot.val().frequency;
+        var st = snapshot.val().start;
+
+        var trainFrequency = freq;
+        var firstTrain = st;
+
+        //subtract one year to ensure to time conflicts over calculated microseconds.
+        var fixTime = moment(firstTrain, "hh:mm").subtract(1, "years");
+        //call moments library
+        var currentMinute = moment();
+        //format currentMinute, post to html
+        $("#currentTimeSpan").html(" Current Time : " + currentMinute.format("hh:mm"));
+
+        var timeDifference = moment().diff(moment(fixTime), "minutes");
+
+        var timeRemaining = timeDifference % trainFrequency;
+
+        var minutesTillTrain = trainFrequency - timeRemaining;
+
+        var nextTrain = moment().add(minutesTillTrain, "minutes")
+
+        var arrivalTime = moment(nextTrain).format("hh:mm");
+
+        //create new row for each train
+        $("#trainScheduleBody").append("<tr><td>" + na + "</td><td>" + dest + "</td><td>" + freq + "</td><td>" + st + "</td><td>" + arrivalTime + "</td><td>" + minutesTillTrain + " Minutes" + "</td></tr>");
+
+    });//end snapshot return function
+
+}); // End document.ready
+</script>
+</body>
+</html>
